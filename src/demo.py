@@ -77,6 +77,14 @@ def main():
         "I have knee pain and joint swelling, please help."
     )
 
+    # 5. Ved's Query
+    run_demo_case(
+        "5. Ved's Query",
+        "age 20, female, pitta dosha, too much bloating after eating anything, constipation frequent, irritation and unhealthy mental well being"
+    )
+
+
+
 
 if __name__ == "__main__":
     main()
