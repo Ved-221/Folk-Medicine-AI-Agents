@@ -29,7 +29,9 @@ This document tracks empirical evaluation benchmarks on the ground-truth Gold Se
 
 | Metric | Target | Baseline (v1) | Achieved (v2) |
 |---|---|---|---|
-| Hallucination Rate (unquoted claims) | 0.0% | N/A | *Pending Phase 3* |
-| Symptom Term Recall | ≥ 80.0% | N/A | *Pending Phase 3* |
-| Ingredient Recall | ≥ 80.0% | N/A | *Pending Phase 3* |
-| Caution Flag Recall | ~100.0% | N/A | *Pending Phase 3* |
+| Hallucination Rate (unquoted claims) | 0.0% | N/A | **0.0%** |
+| Symptom Term Recall | ≥ 80.0% | N/A | **100.0%** (Prec: 100.0%) |
+| Ingredient Recall | ≥ 80.0% | N/A | **100.0%** (Prec: 100.0%) |
+| Pregnancy Caution Recall | ~100.0% | N/A | **100.0%** |
+| Child Caution Recall | ~100.0% | N/A | **100.0%** |
+| Share Routed to Review Queue | - | N/A | **0.0%** |
