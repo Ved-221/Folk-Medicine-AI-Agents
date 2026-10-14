@@ -34,3 +34,28 @@ SEMANTIC_MATCH_THRESHOLD = 0.55  # Cosine similarity threshold (0-1)
 HYBRID_SEMANTIC_WEIGHT = 0.65
 HYBRID_FUZZY_WEIGHT = 0.35
 AUTO_ACCEPT_CONFIDENCE_THRESHOLD = 0.80
+
+# Deterministic Red-Flag Symptoms (Mandatory Immediate see_doctor)
+RED_FLAGS_LIST = [
+    "coughing blood",
+    "coughing up blood",
+    "blood in sputum",
+    "chest pain",
+    "crushing chest pain",
+    "stabbing chest pain",
+    "radiating pain",
+    "severe breathlessness",
+    "shortness of breath at rest",
+    "blue lips",
+    "gasping for air",
+    "facial paralysis",
+    "sudden paralysis",
+    "arm weakness",
+    "slurred speech",
+    "high fever 105",
+    "stiff neck",
+    "seizure",
+    "loss of consciousness",
+    "confusion",
+    "anaphylaxis",
+]

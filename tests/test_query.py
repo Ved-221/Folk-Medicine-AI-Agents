@@ -67,3 +67,34 @@ def test_dosha_filtering_exclusion():
     matches = find_matches(mock_rows, doshas=["pitta"], symptom="dry cough", top_k=3)
     assert len(matches) == 1
     assert matches[0][0]["row_id"] == "r2"
+
+
+def test_find_hybrid_matches():
+    from unittest.mock import MagicMock
+    import numpy as np
+    from src.agent1.query import find_hybrid_matches
+    from src.common.llm_client import LLMClient
+
+    mock_client = MagicMock(spec=LLMClient)
+    mock_client.embed.return_value = [[1.0, 0.0]]
+
+    rows = [
+        {"row_id": "r1", "condition": "cough", "dosha_involvement": ["vata"]},
+        {"row_id": "r2", "condition": "fever", "dosha_involvement": ["pitta"]},
+    ]
+    # Matrix with r1 matching query vector [1.0, 0.0]
+    matrix = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
+    id_map = ["r1", "r2"]
+
+    parsed = {"doshas": ["vata"], "symptom": "cough"}
+    results = find_hybrid_matches(
+        parsed, rows, matrix=matrix, id_map=id_map, client=mock_client, top_k=2
+    )
+
+    assert len(results) == 1
+    top_row, blended_score, breakdown = results[0]
+    assert top_row["row_id"] == "r1"
+    assert blended_score >= 0.8
+    assert "semantic" in breakdown
+    assert "fuzzy" in breakdown
+

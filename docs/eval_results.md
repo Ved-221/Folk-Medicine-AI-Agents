@@ -7,10 +7,9 @@ This document tracks empirical evaluation benchmarks on the ground-truth Gold Se
 | Method | Top-1 Accuracy | Top-3 Accuracy | No-Match Correctness | Evaluated Queries |
 |---|---|---|---|---|
 | **Fuzzy only (Baseline Task 1.4)** | **25.0%** (6/24) | **37.5%** (9/24) | **16.7%** (6/6) | 30 |
-| Semantic Only (Phase 4) | *Pending* | *Pending* | *Pending* | - |
-| Hybrid Semantic + Fuzzy (Phase 4) | *Pending* | *Pending* | *Pending* | - |
+| **Hybrid Semantic + Fuzzy (Phase 4)** | **29.2%** (7/24) | **41.7%** (10/24) | **16.7%** | 30 |
 
-### Accuracy Breakdown by Query Category
+### Accuracy Breakdown by Query Category (Fuzzy Baseline)
 
 | Category | Queries | Top-1 Correct | Top-3 Correct | Top-1 % |
 |---|---|---|---|---|

@@ -111,3 +111,98 @@ def find_matches(
 
     # Step 4: Top-k selection
     return scored_candidates[:top_k]
+
+
+def find_hybrid_matches(
+    parsed_query: dict[str, Any],
+    rows: list[dict[str, Any]],
+    matrix: Any | None = None,
+    id_map: list[str] | None = None,
+    top_k: int = 3,
+    client: Any | None = None,
+    threshold: float = 0.50,
+) -> list[tuple[dict[str, Any], float, dict[str, float]]]:
+    """Hybrid retrieval combining deterministic dosha filter, semantic vectors, and fuzzy matching.
+
+    Args:
+        parsed_query: Parsed query dictionary containing 'doshas' and 'symptom'.
+        rows: Dataset records (clean or enriched).
+        matrix: Precomputed vector embeddings matrix (optional).
+        id_map: List of row_ids matching matrix rows (optional).
+        top_k: Maximum number of matches to return.
+        client: LLMClient instance for embedding the query string.
+        threshold: Minimum blended score (0.0 to 1.0) to be returned.
+
+    Returns:
+        List of (matched_row, blended_score, score_breakdown_dict) sorted descending.
+    """
+    symptom = str(parsed_query.get("symptom") or "").strip()
+    if not symptom:
+        return []
+
+    doshas = parsed_query.get("doshas", [])
+    user_doshas = {d.strip().lower() for d in doshas if isinstance(d, str)}
+
+    # Step 1: Code-level dosha filter
+    eligible_rows: list[dict[str, Any]] = []
+    eligible_ids: set[str] = set()
+    for r in rows:
+        row_doshas = set(r.get("dosha_involvement", []))
+        if not user_doshas or (user_doshas & row_doshas):
+            eligible_rows.append(r)
+            rid = str(r.get("row_id", ""))
+            if rid:
+                eligible_ids.add(rid)
+
+    if not eligible_rows:
+        return []
+
+    # Step 2: Semantic vector scoring (if index available)
+    semantic_scores: dict[str, float] = {}
+    if matrix is not None and id_map is not None:
+        try:
+            from src.agent1.embedder import search_semantic
+            from src.common.llm_client import default_client
+
+            llm = client or default_client
+            q_vectors = llm.embed([symptom])
+            if q_vectors and len(q_vectors[0]) > 0:
+                sem_matches = search_semantic(
+                    query_vector=q_vectors[0],
+                    candidate_ids=eligible_ids,
+                    matrix=matrix,
+                    id_map=id_map,
+                    top_k=len(eligible_ids),
+                )
+                for rid, score in sem_matches:
+                    semantic_scores[rid] = max(0.0, score)
+        except Exception:
+            semantic_scores = {}
+
+    # Step 3: Fuzzy scoring and score blending
+    from src.common.config import HYBRID_FUZZY_WEIGHT, HYBRID_SEMANTIC_WEIGHT
+
+    scored: list[tuple[dict[str, Any], float, dict[str, float]]] = []
+    for r in eligible_rows:
+        rid = str(r.get("row_id", ""))
+        fuzzy_raw = score_row_fuzzy(symptom, r)  # 0 to 100
+        fuzzy_norm = fuzzy_raw / 100.0  # 0.0 to 1.0
+
+        if rid in semantic_scores:
+            sem_norm = semantic_scores[rid]
+            blended = (HYBRID_SEMANTIC_WEIGHT * sem_norm) + (HYBRID_FUZZY_WEIGHT * fuzzy_norm)
+        else:
+            sem_norm = 0.0
+            blended = fuzzy_norm
+
+        if blended >= threshold:
+            breakdown = {
+                "blended": round(blended, 3),
+                "semantic": round(sem_norm, 3),
+                "fuzzy": round(fuzzy_norm, 3),
+            }
+            scored.append((r, blended, breakdown))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[:top_k]
+
