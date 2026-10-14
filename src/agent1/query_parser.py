@@ -164,16 +164,59 @@ def parse_query(
             use_cache=use_cache,
         )
     except Exception:
-        # Fallback to simple extraction on parse failure
+        # Resilient offline fallback using regex extraction
+        age_match = re.search(r"\b(\d{1,3})\s*(?:years?|yrs?|saal|yo|-year-old)\b", clean_text, re.IGNORECASE)
+        if not age_match:
+            age_match = re.search(r"\bage\s*[:=]?\s*(\d{1,3})\b", clean_text, re.IGNORECASE)
+        fallback_age = int(age_match.group(1)) if age_match else None
+
+        extracted_doshas = [d for d in ["vata", "pitta", "kapha"] if d in clean_text.lower()]
+
+        # Extract symptom phrase cleanly
+        symptom_match = re.search(
+            r"(?:suffering from|having|complaining of|got|with|feel(?:ing)?)\s+(?:a\s+)?([^.,;]+)",
+            clean_text,
+            re.IGNORECASE,
+        )
+        if symptom_match:
+            raw_symptom = symptom_match.group(1).strip()
+        else:
+            # Strip age and dosha tokens
+            cleaned_sym = re.sub(r"\b\d{1,3}\s*(?:years?|yrs?|saal|yo)\s*(?:old)?\b", "", clean_text, flags=re.I)
+            cleaned_sym = re.sub(r"\b(?:vata|pitta|kapha)\s*(?:dosha|constitution|type)?\b", "", cleaned_sym, flags=re.I)
+            cleaned_sym = re.sub(r"\b(?:i am|am|patient|meri umar|saal hai)\b", "", cleaned_sym, flags=re.I)
+            raw_symptom = cleaned_sym.strip()
+
+        # Handle common Hinglish vernacular mappings in offline mode
+        hinglish_map = {
+            "chhati mein jalan": "acid reflux",
+            "sukhi khasi": "dry cough",
+            "pet dard": "indigestion bloating",
+            "sardard": "headache migraine",
+            "balgam": "cough congestion",
+        }
+        for h_term, trans in hinglish_map.items():
+            if h_term in clean_text.lower():
+                raw_symptom = f"{trans} ({h_term})"
+                break
+
+        missing = []
+        if fallback_age is None:
+            missing.append("age")
+        if not extracted_doshas:
+            missing.append("dosha")
+        if not raw_symptom:
+            missing.append("symptom")
+
         raw_parsed = {
-            "doshas": [d for d in ["vata", "pitta", "kapha"] if d in clean_text.lower()],
-            "symptom": clean_text,
-            "age": None,
+            "doshas": extracted_doshas,
+            "symptom": raw_symptom,
+            "age": fallback_age,
             "duration": None,
             "red_flags": early_red_flags,
             "pregnant_or_breastfeeding": None,
-            "language_detected": "English",
-            "missing_fields": ["age"],
+            "language_detected": "English" if "saal" not in clean_text.lower() else "Hinglish",
+            "missing_fields": missing,
         }
 
     # 3. Apply deterministic code validation
